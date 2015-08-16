@@ -1,0 +1,226 @@
+<!doctype html>
+<!-- The DOCTYPE declaration above will set the     -->
+<!-- browser's rendering engine into                -->
+<!-- "Standards Mode". Replacing this declaration   -->
+<!-- with a "Quirks Mode" doctype is not supported. -->
+
+<html>
+<head>
+  <script>
+    //    window.addEventListener('load', onDocLoaded, false);
+    var e;
+    var r = {};
+    // Override for adding event listeners
+    var oldAddEventListener = EventTarget.prototype.addEventListener;
+    EventTarget.prototype.addEventListener = function (eventName, eventHandler) {
+      console.log("added" + eventName);
+      //        listenerCount[eventName] = (listenerCount[eventName] || 0) + 1;
+      //        renderTable();
+      oldAddEventListener.call(this, eventName, function (event) {
+        if (eventName === "keypress" || eventName === "click") {
+          console.log("event");
+          console.log(event);
+          var path = createXPathFromElement(event.target);
+          console.log(path);
+          var found = lookupElementByXPath(path);
+          console.log("found=" + found);
+          var e = sessionStorage.getItem(path);
+          console.log("from sess");
+          console.log(e);
+          if (e) {
+            e = JSON.parse(e);
+          } else {
+            e = [];
+          }
+
+          var s = {
+            name: eventName,
+            value: null,
+          };
+
+          if (eventName === "keypress") {
+            s.value = event.keyCode;
+          }
+
+          e.push(s);
+
+          sessionStorage.setItem(path, JSON.stringify(e));
+        }
+        e = event;
+      });
+
+      oldAddEventListener.call(this, eventName, function (event) {
+        eventHandler(event);
+      });
+    };
+
+    function createXPathFromElement(elm) {
+      var allNodes = document.getElementsByTagName('*');
+      for (var segs = []; elm && elm.nodeType == 1; elm = elm.parentNode) {
+        if (elm.hasAttribute('id')) {
+          var uniqueIdCount = 0;
+          for (var n = 0; n < allNodes.length; n++) {
+            if (allNodes[n].hasAttribute('id') && allNodes[n].id == elm.id) uniqueIdCount++;
+            if (uniqueIdCount > 1) break;
+          }
+          ;
+          if (uniqueIdCount == 1) {
+            segs.unshift('id("' + elm.getAttribute('id') + '")');
+            return segs.join('/');
+          } else {
+            segs.unshift(elm.localName.toLowerCase() + '[@id="' + elm.getAttribute('id') + '"]');
+          }
+        } else if (elm.hasAttribute('class')) {
+          segs.unshift(elm.localName.toLowerCase() + '[@class="' + elm.getAttribute('class') + '"]');
+        } else {
+          for (i = 1, sib = elm.previousSibling; sib; sib = sib.previousSibling) {
+            if (sib.localName == elm.localName)  i++;
+          }
+          ;
+          segs.unshift(elm.localName.toLowerCase() + '[' + i + ']');
+        }
+        ;
+      }
+      ;
+      return segs.length ? '/' + segs.join('/') : null;
+    }
+    ;
+
+    function lookupElementByXPath(path) {
+      var evaluator = new XPathEvaluator();
+      var result = evaluator.evaluate(path, document.documentElement, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+      return result.singleNodeValue;
+    }
+
+    function onDocLoaded() {
+      console.log(location.hash);
+      if (location.hash.indexOf("doit") !== -1) {
+        console.log("iter over: " + sessionStorage.length);
+        for (var i = 0; i < sessionStorage.length; i++) {
+          var key = sessionStorage.key(i);
+          console.log("KEY: " + key);
+          var e = lookupElementByXPath(key);
+          var json = sessionStorage.getItem(key);
+          var events = JSON.parse(json);
+          console.log(events);
+          for (var i in events) {
+            console.log(events[i]);
+            if (events[i].name === "click") {
+              console.log("CLICKINGGGG");
+              e.click();
+            } else if (events[i].name === "keypress") {
+              sim(events[i].value);
+            }
+          }
+        }
+      }
+    }
+    ;
+
+    function sim(keycode) {
+      var keyboardEvent = document.createEvent("KeyboardEvent");
+      var initMethod = typeof keyboardEvent.initKeyboardEvent !== 'undefined' ? "initKeyboardEvent" : "initKeyEvent";
+
+
+      keyboardEvent[initMethod](
+          "keydown", // event type : keydown, keyup, keypress
+          true, // bubbles
+          true, // cancelable
+          window, // viewArg: should be window
+          false, // ctrlKeyArg
+          false, // altKeyArg
+          false, // shiftKeyArg
+          false, // metaKeyArg
+          keycode, // keyCodeArg : unsigned long the virtual key code, else 0
+          0 // charCodeArgs : unsigned long the Unicode character associated with the depressed key, else 0
+      );
+      document.dispatchEvent(keyboardEvent);
+    }
+
+    function simulateKeyEvent(character) {
+      var evt = document.createEvent("KeyboardEvent");
+      (evt.initKeyEvent || evt.initKeyboardEvent)("keypress", true, true, window,
+          0, 0, 0, 0,
+          0, character.charCodeAt(0))
+      var canceled = !body.dispatchEvent(evt);
+      if (canceled) {
+        // A handler called preventDefault
+        alert("canceled");
+      } else {
+        // None of the handlers called preventDefault
+        alert("not canceled");
+      }
+    }
+    //
+    //    function onNodeInserted(evt) {
+    //        evt.srcElement.addEventListener('click', onNodeClicked, false);
+    //    }
+    //
+    //    function onNodeClicked(e) {
+    //        console.log(e);
+    //    }
+  </script>
+  <meta charset=UTF-8>
+
+  <!--                                                               -->
+  <!-- Consider inlining CSS to reduce the number of reques!ted files -->
+  <!--                                                               -->
+  <link type="text/css" rel="stylesheet" href="serial.css">
+
+  <!--                                           -->
+  <!-- Any title is fine                         -->
+  <!--                                           -->
+  <title>Web Application Starter Project</title>
+
+  <!--                                           -->
+  <!-- This script loads your compiled module.   -->
+  <!-- If you add any GWT meta tags, they must   -->
+  <!-- be added before this line.                -->
+  <!--                                           -->
+  <script src="app/app.nocache.js"></script>
+</head>
+
+<!--                                           -->
+<!-- The body can have arbitrary html, or      -->
+<!-- you can leave the body empty if you want  -->
+<!-- to create a completely dynamic UI.        -->
+<!--                                           -->
+<body>
+
+<!-- OPTIONAL: include this if you want history support -->
+<iframe src="javascript:''" id="__gwt_historyFrame" tabIndex='-1'
+        style="position:absolute;width:0;height:0;border:0"></iframe>
+
+<!-- RECOMMENDED if your web app will not function without JavaScript enabled -->
+<noscript>
+  <div
+      style="width: 22em; position: absolute; left: 50%; margin-left: -11em; color: red; background-color: white; border: 1px solid red; padding: 4px; font-family: sans-serif">
+    Your web browser must have JavaScript enabled
+    in order for this application to display correctly.
+  </div>
+</noscript>
+
+<h1>Web Application Starter Project</h1>
+
+<table align="center">
+  <tr>
+    <td colspan="2" style="font-weight:bold;">Please enter your name:</td>
+  </tr>
+  <tr>
+    <td id="nameFieldContainer"></td>
+    <td id="sendButtonContainer"></td>
+  </tr>
+  <tr>
+    <td colspan="2" style="color:red;" id="errorLabelContainer"></td>
+  </tr>
+</table>
+<form id="form">
+  <input id="t1" type="text"/>
+  <input id="t2" type="text"/>
+  <input type="checkbox"/>
+  <input id="t3" type="text"/>
+</form>
+</body>
+</html>
+
+
