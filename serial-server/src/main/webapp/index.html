@@ -7,52 +7,54 @@
 <html>
 <head>
   <script>
-    //    window.addEventListener('load', onDocLoaded, false);
-    var e;
+     var inputs;
+//     window.addEventListener('load', onDocLoaded, false);
     var r = {};
+     var startListening = false;
     // Override for adding event listeners
-    var oldAddEventListener = EventTarget.prototype.addEventListener;
-    EventTarget.prototype.addEventListener = function (eventName, eventHandler) {
-      console.log("added" + eventName);
-      //        listenerCount[eventName] = (listenerCount[eventName] || 0) + 1;
-      //        renderTable();
-      oldAddEventListener.call(this, eventName, function (event) {
-        if (eventName === "keypress" || eventName === "click") {
-          console.log("event");
-          console.log(event);
-          var path = createXPathFromElement(event.target);
-          console.log(path);
-          var found = lookupElementByXPath(path);
-          console.log("found=" + found);
-          var e = sessionStorage.getItem(path);
-          console.log("from sess");
-          console.log(e);
-          if (e) {
-            e = JSON.parse(e);
-          } else {
-            e = [];
-          }
+         var oldAddEventListener = EventTarget.prototype.addEventListener;
+         EventTarget.prototype.addEventListener = function (eventName, eventHandler) {
+             console.log("added" + eventName);
+             //        listenerCount[eventName] = (listenerCount[eventName] || 0) + 1;
+             //        renderTable();
+                 oldAddEventListener.call(this, eventName, function (event) {
+                     if (startListening) {
+                     if (eventName === "keypress" || eventName === "click") {
+                         console.log("event");
+                         console.log(event);
+                         var path = createXPathFromElement(event.target);
+                         console.log(path);
+                         var found = lookupElementByXPath(path);
+                         console.log("found=" + found);
+                         var e = sessionStorage.getItem(path);
+                         console.log("from sess");
+                         console.log(e);
+                         if (e) {
+                             e = JSON.parse(e);
+                         } else {
+                             e = {value: null, events: []};
+                         }
 
-          var s = {
-            name: eventName,
-            value: null,
-          };
+                         var eventObj = {
+                             name: eventName,
+                             value: null,
+                         };
 
-          if (eventName === "keypress") {
-            s.value = event.keyCode;
-          }
+                         if (eventName === "keypress") {
+                             eventObj.value = event.keyCode;
+                         }
 
-          e.push(s);
+                         e.events.push(eventObj);
 
-          sessionStorage.setItem(path, JSON.stringify(e));
-        }
-        e = event;
-      });
+                         sessionStorage.setItem(path, JSON.stringify(e));
+                     }
+                 }
+                 });
 
-      oldAddEventListener.call(this, eventName, function (event) {
-        eventHandler(event);
-      });
-    };
+                 oldAddEventListener.call(this, eventName, function (event) {
+                     eventHandler(event);
+                 });
+         };
 
     function createXPathFromElement(elm) {
       var allNodes = document.getElementsByTagName('*');
@@ -92,27 +94,54 @@
       return result.singleNodeValue;
     }
 
+     function saveInput(){
+        var inputs = document.getElementsByTagName("input");
+         for (i in inputs) {
+             console.log(inputs[i]);
+             var path = createXPathFromElement(inputs[i]);
+             var e = sessionStorage.getItem(path);
+             if (e) {
+                 e = JSON.parse(e);
+             } else {
+                 e = {value: null, events: []};
+             }
+             e.value = inputs[i].value;
+             console.log(e.value);
+             sessionStorage.setItem(path, JSON.stringify(e));
+         }
+     }
+
     function onDocLoaded() {
       console.log(location.hash);
-      if (location.hash.indexOf("doit") !== -1) {
+      if (location.search.indexOf("version") !== -1) {
         console.log("iter over: " + sessionStorage.length);
         for (var i = 0; i < sessionStorage.length; i++) {
           var key = sessionStorage.key(i);
           console.log("KEY: " + key);
           var e = lookupElementByXPath(key);
           var json = sessionStorage.getItem(key);
-          var events = JSON.parse(json);
+          var eventObj = JSON.parse(json);
+          var events = eventObj.events;
           console.log(events);
-          for (var i in events) {
-            console.log(events[i]);
-            if (events[i].name === "click") {
+          for (var j in events) {
+            console.log(events[j]);
+            if (events[j].name === "click") {
               console.log("CLICKINGGGG");
               e.click();
-            } else if (events[i].name === "keypress") {
-              sim(events[i].value);
+            } else if (events[j].name === "keypress") {
+              sim(events[j].value);
             }
           }
+
+            // set value after replaying events
+            if(eventObj.value != null) {
+                console.log("settings " + e + " to " + eventObj.value);
+                e.value = eventObj.value;
+            }
         }
+          startListening = true;
+      } else {
+          startListening = true;
       }
     }
     ;
@@ -213,12 +242,14 @@
   <tr>
     <td colspan="2" style="color:red;" id="errorLabelContainer"></td>
   </tr>
-</table>
-<form id="form">
+</table> new verison do deploy
+<form id="form">ren
   <input id="t1" type="text"/>
   <input id="t2" type="text"/>
   <input type="checkbox"/>
+
   <input id="t3" type="text"/>
+    <input id="new thing"/>
 </form>
 </body>
 </html>

@@ -4,6 +4,7 @@ import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.event.dom.client.*;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
+import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.rpc.IncompatibleRemoteServiceException;
@@ -27,10 +28,40 @@ public class App implements EntryPoint {
 	private final GreetingServiceAsync greetingService = GWT
 			.create(GreetingService.class);
 
+	String version = "0";
 	/**
 	 * This is the entry point method.
 	 */
 	public void onModuleLoad() {
+		version = Window.Location.getParameter("version");
+		if (version == null) {
+			version = "0";
+		}
+		final Timer t = new Timer() {
+			@Override
+			public void run() {
+				greetingService.version(new AsyncCallback<String>() {
+					@Override
+					public void onFailure(Throwable throwable) {
+
+					}
+
+					@Override
+					public void onSuccess(String newVersion) {
+						if (!newVersion.equals(version)) {
+							version = newVersion;
+//							Window.Location.replace("#doit:version=" + newVersion);
+							done();
+							Window.Location.replace("?version=" + version);
+//			Window.Location.reload();
+						}
+						schedule(1000);
+					}
+				});
+			}
+		};
+				t.schedule(1000);
+
 		final Button sendButton = new Button("Send");
 		final Button x = new Button("X");
 		final TextBox nameField = new TextBox();
@@ -92,7 +123,7 @@ public class App implements EntryPoint {
 			 * Fired when the user clicks on the sendButton.
 			 */
 			public void onClick(ClickEvent event) {
-				sendNameToServer();
+				setH();
 			}
 
 			/**
@@ -102,6 +133,10 @@ public class App implements EntryPoint {
 				if (event.getNativeKeyCode() == KeyCodes.KEY_ENTER) {
 					sendNameToServer();
 				}
+			}
+
+			private void setH() {
+				Window.Location.replace("?version=" + version);
 			}
 
 			/**
@@ -138,7 +173,6 @@ public class App implements EntryPoint {
 							public void onSuccess(GreetingResponse result) {
 								dialogBox.setText("Remote Procedure Call");
 
-								Window.Location.replace("#doit");
 								serverResponseLabel
 										.removeStyleName("serverResponseLabelError");
 								serverResponseLabel.setHTML(new SafeHtmlBuilder()
@@ -159,13 +193,19 @@ public class App implements EntryPoint {
 		MyHandler handler = new MyHandler();
 		sendButton.addClickHandler(handler);
 		nameField.addKeyUpHandler(handler);
-
-		done();
+		on();
 	}
 
+	// onsubmit collect the events and inputs
+	// i
+
 	public static native void done() /*-{
-      $wnd.onDocLoaded();
+      $wnd.saveInput();
   }-*/;
+
+	public static native void on() /*-{
+        $wnd.onDocLoaded();
+    }-*/;
 
 	private void onIncompatible(Throwable e) {
 		if (e instanceof IncompatibleRemoteServiceException) {
